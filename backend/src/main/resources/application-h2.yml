@@ -1,0 +1,18 @@
+## Optional profile for local verification when no MySQL server is available.
+## Activate with SPRING_PROFILES_ACTIVE=h2 (or --spring.profiles.active=h2).
+## MySQL remains the default/production database per the project spec - this
+## profile only exists so the app can be smoke-tested with zero install.
+#spring:
+#  datasource:
+#    url: jdbc:h2:file:./data/zkteco;MODE=MySQL;DB_CLOSE_ON_EXIT=FALSE
+#    username: sa
+#    password: ""
+#    driver-class-name: org.h2.Driver
+#  jpa:
+#    hibernate:
+#      ddl-auto: update
+#    properties:
+#      hibernate:
+#        dialect: org.hibernate.dialect.H2Dialect
+#  flyway:
+#    enabled: false

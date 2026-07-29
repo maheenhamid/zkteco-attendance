@@ -1,0 +1,127 @@
+### ZKTeco Attendance API - sample requests (VS Code REST Client / JetBrains HTTP Client format)
+@baseUrl = http://localhost:8080
+@token = REPLACE_WITH_TOKEN_FROM_LOGIN_RESPONSE
+
+### Login (default seeded operator)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+
+### Current profile
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Institutes (proxied + cached from api.shebashikkha.com)
+GET {{baseUrl}}/api/institutes
+Authorization: Bearer {{token}}
+
+### Classes for an institute
+GET {{baseUrl}}/api/institutes/1/classes
+Authorization: Bearer {{token}}
+
+### Dashboard stats
+GET {{baseUrl}}/api/dashboard/stats
+Authorization: Bearer {{token}}
+
+### List devices
+GET {{baseUrl}}/api/devices?page=0&size=20
+Authorization: Bearer {{token}}
+
+### Create a device
+POST {{baseUrl}}/api/devices
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "serialNumber": "F18-0001",
+  "name": "Main Gate F18",
+  "instituteId": 1,
+  "ipAddress": "192.168.1.115",
+  "port": 4370,
+  "location": "Main Gate"
+}
+
+### List device users (biometric-enrolled people)
+GET {{baseUrl}}/api/users?instituteId=1&page=0&size=20
+Authorization: Bearer {{token}}
+
+### Create a device user (queues a DATA UPDATE USERINFO command to the device)
+POST {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "instituteId": 1,
+  "classId": 2,
+  "className": "One",
+  "fullName": "John Doe",
+  "enrollNo": "1001",
+  "cardNo": "",
+  "devicePrivilege": "COMMON",
+  "deviceId": 1
+}
+
+### Bulk delete device users
+POST {{baseUrl}}/api/users/bulk-delete
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ids": [1, 2, 3]
+}
+
+### List roles
+GET {{baseUrl}}/api/roles
+Authorization: Bearer {{token}}
+
+### List permissions (for building the role checkbox form)
+GET {{baseUrl}}/api/roles/permissions
+Authorization: Bearer {{token}}
+
+### Create a role
+POST {{baseUrl}}/api/roles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "INSTITUTE_MANAGER",
+  "description": "Manage devices and users for one institute",
+  "permissionIds": [1, 2, 6, 7]
+}
+
+### Attendance search
+GET {{baseUrl}}/api/attendance?instituteId=1&fromDate=2026-07-01&toDate=2026-07-27&page=0&size=20
+Authorization: Bearer {{token}}
+
+### Attendance CSV export
+GET {{baseUrl}}/api/attendance/export?instituteId=1&fromDate=2026-07-01&toDate=2026-07-27
+Authorization: Bearer {{token}}
+
+### Command monitor
+GET {{baseUrl}}/api/commands?status=PENDING&page=0&size=20
+Authorization: Bearer {{token}}
+
+### ============================================================
+### ZKTeco F18 device protocol (ADMS/iClock) - called BY the device,
+### shown here only for reference/manual testing with curl/Postman.
+### No Authorization header - devices authenticate via SN only.
+### ============================================================
+
+### Device handshake
+GET {{baseUrl}}/iclock/cdata?SN=F18-0001&options=all
+
+### Device pushes attendance logs
+POST {{baseUrl}}/iclock/cdata?SN=F18-0001&table=ATTLOG
+Content-Type: text/plain
+
+1001	2026-07-27 08:15:00	0	1	0	0	0	0	0
+
+### Device polls for pending commands
+GET {{baseUrl}}/iclock/getrequest?SN=F18-0001
+
+### Device reports a command result
+POST {{baseUrl}}/iclock/device-command-result?SN=F18-0001&ID=1&Return=0&CMD=DATA+UPDATE+USERINFO
