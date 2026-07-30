@@ -62,6 +62,7 @@ public class SecurityConfig {
                     .antMatchers("/api/auth/**").permitAll()
                     .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .antMatchers("/actuator/health").permitAll()
+                    .antMatchers("/atd/list/**").permitAll()
                     .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

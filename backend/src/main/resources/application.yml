@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: attendance
+
+  # ==========================
+  # Primary Database (DB1)
+  # ==========================
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:zkteco_attendance}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true
     username: ${DB_USERNAME:root}
@@ -12,6 +16,22 @@ spring:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
+
+  # ==========================
+  # Secondary Database (DB2)
+  # ==========================
+  second-datasource:
+    # NOTE: must be jdbc-url, not url - this binds directly onto a raw HikariDataSource
+    # (via DataSourceBuilder + @ConfigurationProperties in SecondaryDataSourceConfig),
+    # which only understands its own "jdbcUrl" property. The "url" -> "jdbcUrl"
+    # translation only happens for Spring Boot's own spring.datasource.* (primary DB).
+    jdbc-url: jdbc:mysql://${DB2_HOST:localhost}:${DB2_PORT:3306}/${DB2_NAME:sheba_client_attn_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true
+    username: ${DB2_USERNAME:root}
+    password: ${DB2_PASSWORD:1234}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
   jpa:
     hibernate:
       ddl-auto: validate
@@ -21,8 +41,14 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: false
     show-sql: false
+  # ==========================
+  # Flyway (Only DB1)
+  # ==========================
   flyway:
     enabled: true
+    url: ${spring.datasource.url}
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
     baseline-on-migrate: true
     locations: classpath:db/migration
   jackson:
@@ -53,3 +79,8 @@ logging:
   level:
     root: INFO
     com.zkteco.attendance: DEBUG
+    
+biotime:
+  base-url: http://103.78.248.138:8088
+  username: sheba
+  password: Sheba@123
