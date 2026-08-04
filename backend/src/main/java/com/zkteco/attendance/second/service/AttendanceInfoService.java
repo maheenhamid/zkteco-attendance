@@ -1,7 +1,7 @@
 package com.zkteco.attendance.second.service;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,8 +24,11 @@ public class AttendanceInfoService {
 	
 	@Autowired
 	public IclockTransactionRepository iclockTransactionRepository;
-	
-	
+
+	private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+	private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+	private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public ItemResponse attendanceInfoList() {
 		
@@ -49,13 +52,7 @@ public class AttendanceInfoService {
 	public ItemResponse attendanceInfoList(AttendanceInfoRequest request) {
 		
 		ItemResponse itemResponse = new ItemResponse();
-		
-		DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
-		
-		DateFormat df2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		
-		DateFormat df3 = new SimpleDateFormat("HH:mm:ss");
-		
+
 		List<AttendanceInfoView> views = new ArrayList<>();
 		
 		List<AttendanceInfo> attendanceInfos1 = attendanceInfoRepository.findByCheckdateAndTerminalSnIn(request.getAttendanceDate(),request.getDeviceIds());
@@ -65,32 +62,34 @@ public class AttendanceInfoService {
 			AttendanceInfoView view = new AttendanceInfoView();
 			
 			view.setArea(info.getArea());
-			view.setCheckDate(df1.format(info.getCheckdate()));
-			view.setCheckDateTime(df2.format(info.getCheckDateTime()));
-			view.setCheckTime(df3.format(info.getCheckTime()));
+			view.setCheckDate(DATE_FMT.format(info.getCheckdate()));
+			view.setCheckDateTime(DATETIME_FMT.format(info.getCheckDateTime()));
+			view.setCheckTime(TIME_FMT.format(info.getCheckTime()));
 			view.setEmpCode(info.getEmpCode());
 			view.setId(info.getId());
 			view.setTerminalSn(info.getTerminalSn());
-			view.setUploadTime(df2.format(info.getUploadTime()));
-						
+			view.setUploadTime(DATETIME_FMT.format(info.getUploadTime()));
+
 			views.add(view);
 
 		}
-		
-		List<IclockTransaction> attendanceInfos2 = iclockTransactionRepository.fetchDeviceData(request.getAttendanceDate(), request.getDeviceIds());
-				
+
+		LocalDateTime startOfDay = request.getAttendanceDate().atStartOfDay();
+		LocalDateTime endOfDay = startOfDay.plusDays(1);
+		List<IclockTransaction> attendanceInfos2 = iclockTransactionRepository.fetchDeviceData(startOfDay, endOfDay, request.getDeviceIds());
+
 		for(IclockTransaction info : attendanceInfos2) {
-			
+
 			AttendanceInfoView view = new AttendanceInfoView();
-						
+
 			view.setArea(info.getArea());
-			view.setCheckDate(df1.format(info.getCheckDateTime()));
-			view.setCheckDateTime(df2.format(info.getCheckDateTime()));
-			view.setCheckTime(df3.format(info.getCheckDateTime()));
+			view.setCheckDate(DATE_FMT.format(info.getCheckDateTime()));
+			view.setCheckDateTime(DATETIME_FMT.format(info.getCheckDateTime()));
+			view.setCheckTime(TIME_FMT.format(info.getCheckDateTime()));
 			view.setEmpCode(info.getEmpCode());
 			view.setId(info.getId());
 			view.setTerminalSn(info.getTerminalSn());
-			view.setUploadTime(df2.format(info.getUploadTime()));
+			view.setUploadTime(DATETIME_FMT.format(info.getUploadTime()));
 			
 			views.add(view);
 

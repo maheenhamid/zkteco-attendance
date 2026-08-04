@@ -1,6 +1,5 @@
 package com.zkteco.attendance.service;
 
-import com.zkteco.attendance.dto.institute.ClassDTO;
 import com.zkteco.attendance.dto.institute.ExternalApiEnvelope;
 import com.zkteco.attendance.dto.institute.InstituteDTO;
 import lombok.extern.slf4j.Slf4j;
@@ -20,9 +19,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Thin, cached proxy over the external Shebashikkha institute/class APIs.
- * There is intentionally no local institute/class table - these calls are
- * the single source of truth, per the system's multi-tenant design.
+ * Thin, cached proxy over the external Shebashikkha institute list API, used
+ * only for the super-admin dashboard's institute count. The frontend now
+ * calls the public institute/class APIs directly instead of going through
+ * this service.
  */
 @Service
 @Slf4j
@@ -33,7 +33,6 @@ public class InstituteApiService {
     private final long cacheTtlSeconds;
 
     private final Map<String, CacheEntry<List<InstituteDTO>>> instituteCache = new ConcurrentHashMap<>();
-    private final Map<Long, CacheEntry<List<ClassDTO>>> classCache = new ConcurrentHashMap<>();
 
     public InstituteApiService(RestTemplate restTemplate,
                                 @Value("${app.institute-api.base-url}") String baseUrl,
@@ -60,30 +59,6 @@ public class InstituteApiService {
             return institutes;
         } catch (RestClientException e) {
             log.error("Failed to fetch institute list from external API", e);
-            if (cached != null) {
-                return cached.value;
-            }
-            return Collections.emptyList();
-        }
-    }
-
-    public List<ClassDTO> listClasses(Long instituteId) {
-        CacheEntry<List<ClassDTO>> cached = classCache.get(instituteId);
-        if (cached != null && !cached.isExpired()) {
-            return cached.value;
-        }
-
-        try {
-            ResponseEntity<ExternalApiEnvelope<ClassDTO>> response = restTemplate.exchange(
-                    baseUrl + "/class/list?instituteId={id}", HttpMethod.GET, HttpEntity.EMPTY,
-                    new ParameterizedTypeReference<ExternalApiEnvelope<ClassDTO>>() {
-                    }, instituteId);
-
-            List<ClassDTO> classes = response.getBody() != null ? response.getBody().getItem() : Collections.emptyList();
-            classCache.put(instituteId, new CacheEntry<>(classes, cacheTtlSeconds));
-            return classes;
-        } catch (RestClientException e) {
-            log.error("Failed to fetch class list for institute {} from external API", instituteId, e);
             if (cached != null) {
                 return cached.value;
             }

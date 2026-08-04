@@ -1,6 +1,6 @@
 package com.zkteco.attendance.second.repository;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,7 +11,11 @@ import com.zkteco.attendance.second.entity.IclockTransaction;
 
 public interface IclockTransactionRepository extends JpaRepository<IclockTransaction, Long>{
 
-	
-	@Query(value = "SELECT t from IclockTransaction t where DATE(t.checkDateTime)=?1 AND t.terminalSn IN ?2")
-	public List<IclockTransaction> fetchDeviceData(Date date, List<String> deviceIds);
+	// Day-range comparison instead of JPQL DATE(t.checkDateTime)=?1: Hibernate 5.6's
+	// built-in DATE() function has a fixed java.util.Date return-type binding, so it
+	// rejects a LocalDate parameter at validation time even though the underlying
+	// column is fine. Comparing checkDateTime directly against LocalDateTime bounds
+	// sidesteps that entirely (and lets the DB use an index on checkDateTime).
+	@Query(value = "SELECT t from IclockTransaction t where t.checkDateTime >= ?1 AND t.checkDateTime < ?2 AND t.terminalSn IN ?3")
+	public List<IclockTransaction> fetchDeviceData(LocalDateTime startOfDay, LocalDateTime endOfDay, List<String> deviceIds);
 }
