@@ -1,0 +1,5 @@
+
+# local dev secrets (Sheba Shikkha Flutter prep)
+.claude/*.env
+.claude/run-sheba-flutter-web.cmd
+.claude/run-sheba-flutter-web-prod.cmd
