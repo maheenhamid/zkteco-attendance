@@ -22,6 +22,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -31,8 +32,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.criteria.Predicate;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -44,6 +48,11 @@ import java.util.Set;
 public class DeviceUserService {
 
     private static final int MAX_IMPORT_ERROR_MESSAGES = 50;
+    private static final DateTimeFormatter EXPORT_TS_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String[] EXPORT_COLUMNS = {
+            "Enroll No", "Full Name", "Card No", "Institute Id", "Department",
+            "Device", "Device Privilege", "Sync Status", "Status", "Created At",
+    };
 
     private final DeviceUserRepository deviceUserRepository;
     private final DeviceRepository deviceRepository;
@@ -53,6 +62,45 @@ public class DeviceUserService {
     @Transactional(readOnly = true)
     public Page<DeviceUser> list(Long instituteId, Long classId, Long deviceId, String search, Pageable pageable) {
         return deviceUserRepository.findAll(buildFilterSpec(instituteId, classId, deviceId, search), pageable);
+    }
+
+    /** Same filters as {@link #list}, unpaginated - backs the Excel export button. */
+    @Transactional(readOnly = true)
+    public byte[] exportToExcel(Long instituteId, Long classId, Long deviceId, String search) {
+        List<DeviceUser> users = deviceUserRepository.findAll(buildFilterSpec(instituteId, classId, deviceId, search));
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Users");
+
+            Row header = sheet.createRow(0);
+            for (int i = 0; i < EXPORT_COLUMNS.length; i++) {
+                header.createCell(i).setCellValue(EXPORT_COLUMNS[i]);
+            }
+
+            int rowIdx = 1;
+            for (DeviceUser user : users) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(user.getEnrollNo());
+                row.createCell(1).setCellValue(user.getFullName());
+                row.createCell(2).setCellValue(user.getCardNo() != null ? user.getCardNo() : "");
+                row.createCell(3).setCellValue(user.getInstituteId());
+                row.createCell(4).setCellValue(user.getClassName() != null ? user.getClassName() : "");
+                row.createCell(5).setCellValue(user.getDevice().getName());
+                row.createCell(6).setCellValue(user.getDevicePrivilege().name());
+                row.createCell(7).setCellValue(user.getSyncStatus().name());
+                row.createCell(8).setCellValue(user.getStatus().name());
+                row.createCell(9).setCellValue(user.getCreatedAt() != null ? user.getCreatedAt().format(EXPORT_TS_FORMAT) : "");
+            }
+
+            for (int i = 0; i < EXPORT_COLUMNS.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to generate users Excel export", e);
+        }
     }
 
     @Transactional

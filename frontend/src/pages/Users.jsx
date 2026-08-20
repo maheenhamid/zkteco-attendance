@@ -8,13 +8,13 @@ import SearchBar from '../components/SearchBar';
 import FormField from '../components/FormField';
 import PermissionGate from '../components/PermissionGate';
 import { useInstitutes } from '../hooks/useInstitutes';
-import { useClasses } from '../hooks/useClasses';
+import { useDepartments } from '../hooks/useDepartments';
 import { useDebounce } from '../hooks/useDebounce';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { fetchDevices } from '../services/deviceService';
 import {
-  bulkDeleteUsers, bulkDeleteUsersByFilter, createUser, deleteUser, fetchUsers,
+  bulkDeleteUsers, bulkDeleteUsersByFilter, createUser, deleteUser, downloadUsersExcel, fetchUsers,
   importUsersExcel, resendUnsyncedUsers, resendUser, updateUser,
 } from '../services/userService';
 import { PERMISSIONS } from '../utils/permissions';
@@ -35,10 +35,10 @@ export default function Users() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [instituteFilter, setInstituteFilter] = useState(operator?.superAdmin ? '' : operator?.instituteId);
-  const [classFilter, setClassFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
   const debouncedSearch = useDebounce(search);
 
-  const { data: filterClasses = [] } = useClasses(instituteFilter);
+  const { data: filterDepartments = [] } = useDepartments(instituteFilter);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -53,14 +53,15 @@ export default function Users() {
   const [importForm, setImportForm] = useState(EMPTY_IMPORT);
   const [importing, setImporting] = useState(false);
   const [resendingAll, setResendingAll] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const { data: formClasses = [] } = useClasses(form.instituteId);
+  const { data: formDepartments = [] } = useDepartments(form.instituteId);
   const { data: formDevices = [], isError: formDevicesError } = useQuery(
     ['devices-for-user-form', form.instituteId],
     () => fetchDevices({ instituteId: form.instituteId, size: 100 }),
     { enabled: !!form.instituteId }
   );
-  const { data: importClasses = [] } = useClasses(importForm.instituteId);
+  const { data: importDepartments = [] } = useDepartments(importForm.instituteId);
   const { data: importDevices = [] } = useQuery(
     ['devices-for-import', importForm.instituteId],
     () => fetchDevices({ instituteId: importForm.instituteId, size: 100 }),
@@ -72,7 +73,7 @@ export default function Users() {
     size: 10,
     search: debouncedSearch || undefined,
     instituteId: instituteFilter || undefined,
-    classId: classFilter || undefined,
+    classId: departmentFilter || undefined,
   };
 
   const { data, isLoading } = useQuery(['device-users', params], () => fetchUsers(params), { keepPreviousData: true });
@@ -103,12 +104,12 @@ export default function Users() {
     e.preventDefault();
     setSaving(true);
     try {
-      const selectedClass = formClasses.find((c) => String(c.id) === String(form.classId));
+      const selectedDepartment = formDepartments.find((d) => String(d.id) === String(form.classId));
       const payload = {
         ...form,
         instituteId: Number(form.instituteId),
         classId: form.classId ? Number(form.classId) : null,
-        className: selectedClass?.name || form.className || null,
+        className: selectedDepartment?.name || form.className || null,
         deviceId: Number(form.deviceId),
         // enrollNo (device PIN) isn't collected in this form: left blank on create so the
         // backend auto-assigns the next free PIN, and preserved as-is on edit.
@@ -155,7 +156,7 @@ export default function Users() {
 
   const handleFilterDelete = async () => {
     try {
-      const res = await bulkDeleteUsersByFilter(instituteFilter, classFilter || null);
+      const res = await bulkDeleteUsersByFilter(instituteFilter, departmentFilter || null);
       showToast(`${res.deleted} user(s) deleted`, 'success');
       setFilterDeleteConfirmOpen(false);
       queryClient.invalidateQueries(['device-users']);
@@ -181,7 +182,7 @@ export default function Users() {
     try {
       const res = await resendUnsyncedUsers({
         instituteId: instituteFilter || undefined,
-        classId: classFilter || undefined,
+        classId: departmentFilter || undefined,
       });
       showToast(`${res.resent} unsynced user(s) queued for resend`, 'success');
       queryClient.invalidateQueries(['device-users']);
@@ -189,6 +190,21 @@ export default function Users() {
       showToast(err.response?.data?.message || 'Failed to resend unsynced users', 'error');
     } finally {
       setResendingAll(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await downloadUsersExcel({
+        instituteId: instituteFilter || undefined,
+        classId: departmentFilter || undefined,
+        search: debouncedSearch || undefined,
+      });
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to export users', 'error');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -205,13 +221,13 @@ export default function Users() {
     }
     setImporting(true);
     try {
-      const selectedClass = importClasses.find((c) => String(c.id) === String(importForm.classId));
+      const selectedDepartment = importDepartments.find((d) => String(d.id) === String(importForm.classId));
       const result = await importUsersExcel(
         importForm.file,
         Number(importForm.instituteId),
         Number(importForm.deviceId),
         importForm.classId ? Number(importForm.classId) : undefined,
-        selectedClass?.name
+        selectedDepartment?.name
       );
       showToast(`Import finished: ${result.successCount} succeeded, ${result.errorCount} failed`, result.errorCount > 0 ? 'error' : 'success');
       if (result.errors?.length) {
@@ -232,7 +248,7 @@ export default function Users() {
     { key: 'fullName', label: 'Full Name' },
     { key: 'enrollNo', label: 'Enroll No' },
     { key: 'institute', label: 'Institute', render: (row) => institutesById[row.instituteId] || row.instituteId },
-    { key: 'className', label: 'Class', render: (row) => row.className || '-' },
+    { key: 'className', label: 'Department', render: (row) => row.className || '-' },
     { key: 'deviceName', label: 'Device' },
     { key: 'devicePrivilege', label: 'Privilege' },
     {
@@ -296,6 +312,15 @@ export default function Users() {
               </button>
             )}
           </PermissionGate>
+          <PermissionGate permission={PERMISSIONS.USER_EXPORT}>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="rounded-md border border-primary-600 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 disabled:opacity-60"
+            >
+              {exporting ? 'Exporting...' : 'Download Excel'}
+            </button>
+          </PermissionGate>
           <PermissionGate permission={PERMISSIONS.USER_CREATE}>
             <button onClick={openImport} className="rounded-md border border-primary-600 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50">
               Upload Excel
@@ -312,7 +337,7 @@ export default function Users() {
         {operator?.superAdmin && (
           <select
             value={instituteFilter}
-            onChange={(e) => { setInstituteFilter(e.target.value); setClassFilter(''); setPage(0); }}
+            onChange={(e) => { setInstituteFilter(e.target.value); setDepartmentFilter(''); setPage(0); }}
             className="rounded-md border border-gray-300 px-3 py-2 text-sm"
           >
             <option value="">All Institutes</option>
@@ -320,13 +345,13 @@ export default function Users() {
           </select>
         )}
         <select
-          value={classFilter}
-          onChange={(e) => { setClassFilter(e.target.value); setPage(0); }}
+          value={departmentFilter}
+          onChange={(e) => { setDepartmentFilter(e.target.value); setPage(0); }}
           disabled={!instituteFilter}
           className="rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
         >
-          <option value="">All Classes</option>
-          {filterClasses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          <option value="">All Departments</option>
+          {filterDepartments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
       </div>
 
@@ -377,15 +402,15 @@ export default function Users() {
               {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </FormField>
-          <FormField label="Class">
+          <FormField label="Department">
             <select
               value={form.classId}
               onChange={(e) => setForm({ ...form, classId: e.target.value })}
               disabled={!form.instituteId}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
             >
-              <option value="">Select class</option>
-              {formClasses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <option value="">Select department</option>
+              {formDepartments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </FormField>
           <FormField label="Full Name" required>
@@ -456,7 +481,7 @@ export default function Users() {
       >
         <form id="import-form" onSubmit={handleImport}>
           <p className="mb-4 text-xs text-gray-500">
-            Expected column order (first row is a header and is skipped): <strong>userId, name, cardNumber, department/class</strong>.
+            Expected column order (first row is a header and is skipped): <strong>userId, name, cardNumber, department</strong>.
           </p>
           <FormField label="Institute" required>
             <select
@@ -470,18 +495,18 @@ export default function Users() {
               {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </FormField>
-          <FormField label="Class">
+          <FormField label="Department">
             <select
               value={importForm.classId}
               onChange={(e) => setImportForm({ ...importForm, classId: e.target.value })}
               disabled={!importForm.instituteId}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
             >
-              <option value="">Select class</option>
-              {importClasses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <option value="">Select department</option>
+              {importDepartments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
             <p className="mt-1 text-xs text-gray-400">
-              Applied to every row in this file. Leave blank to use each row's own "department/class" column instead.
+              Applied to every row in this file. Leave blank to use each row's own "department" column instead.
             </p>
           </FormField>
           <FormField label="Target Device" required>
@@ -524,7 +549,7 @@ export default function Users() {
 
       <ConfirmDialog
         open={filterDeleteConfirmOpen}
-        message={`Delete ALL users in ${institutesById[instituteFilter] || 'this institute'}${classFilter ? ' / ' + (filterClasses.find((c) => String(c.id) === String(classFilter))?.name || 'selected class') : ''}? This cannot be undone and will queue delete commands on their devices.`}
+        message={`Delete ALL users in ${institutesById[instituteFilter] || 'this institute'}${departmentFilter ? ' / ' + (filterDepartments.find((d) => String(d.id) === String(departmentFilter))?.name || 'selected department') : ''}? This cannot be undone and will queue delete commands on their devices.`}
         onCancel={() => setFilterDeleteConfirmOpen(false)}
         onConfirm={handleFilterDelete}
       />

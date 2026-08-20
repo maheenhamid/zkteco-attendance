@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { to: '/users', label: 'Users', permission: PERMISSIONS.USER_VIEW, icon: '👥' },
   { to: '/operators', label: 'Operators', permission: PERMISSIONS.ROLE_VIEW, icon: '🧑‍💼' },
   { to: '/roles', label: 'Roles & Permissions', permission: PERMISSIONS.ROLE_VIEW, icon: '🔐' },
+  { to: '/departments', label: 'Departments', permission: PERMISSIONS.DEPARTMENT_VIEW, icon: '🏢' },
   { to: '/attendance', label: 'Attendance', permission: PERMISSIONS.ATTENDANCE_VIEW, icon: '🗓️' },
   { to: '/commands', label: 'Command Monitor', permission: PERMISSIONS.COMMAND_VIEW, icon: '📡' },
 ];

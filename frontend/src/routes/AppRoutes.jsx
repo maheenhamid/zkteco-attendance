@@ -8,6 +8,7 @@ import Devices from '../pages/Devices';
 import Users from '../pages/Users';
 import Operators from '../pages/Operators';
 import Roles from '../pages/Roles';
+import Departments from '../pages/Departments';
 import Attendance from '../pages/Attendance';
 import CommandMonitor from '../pages/CommandMonitor';
 import NotFound from '../pages/NotFound';
@@ -26,6 +27,7 @@ export default function AppRoutes() {
           <Route path="/users" element={<Users />} />
           <Route path="/operators" element={<Operators />} />
           <Route path="/roles" element={<Roles />} />
+          <Route path="/departments" element={<Departments />} />
           <Route path="/attendance" element={<Attendance />} />
           <Route path="/commands" element={<CommandMonitor />} />
         </Route>

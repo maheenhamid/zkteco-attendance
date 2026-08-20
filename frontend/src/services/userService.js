@@ -32,6 +32,21 @@ export function resendUnsyncedUsers(params) {
   return api.post('/api/users/resend-unsynced', null, { params }).then((res) => res.data);
 }
 
+export function downloadUsersExcel(params) {
+  return api
+    .get('/api/users/export', { params, responseType: 'blob' })
+    .then((res) => {
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'users-export.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    });
+}
+
 export function importUsersExcel(file, instituteId, deviceId, classId, className) {
   const formData = new FormData();
   formData.append('file', file);

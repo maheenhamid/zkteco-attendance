@@ -3,7 +3,7 @@ import axios from 'axios';
 // Public Shebashikkha API - no auth token, no backend proxy. Separate axios
 // instance from `api.js` on purpose: that one attaches our own app's JWT
 // Bearer token to every request, which must never be sent to a third-party API.
-const baseURL = import.meta.env.VITE_INSTITUTE_API_BASE_URL || 'https://api.shebashikkha.com/public';
+const baseURL = import.meta.env.VITE_INSTITUTE_API_BASE_URL || 'http://localhost:8082/public';
 
 const instituteApiClient = axios.create({
   baseURL,

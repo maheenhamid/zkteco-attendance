@@ -11,6 +11,8 @@ import com.zkteco.attendance.service.DeviceUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +43,20 @@ public class DeviceUserController {
     @PreAuthorize("hasAuthority('USER_VIEW')")
     public DeviceUserDTO get(@PathVariable Long id) {
         return DeviceUserService.toDTO(deviceUserService.getOwned(id));
+    }
+
+    @GetMapping("/export")
+    @PreAuthorize("hasAuthority('USER_EXPORT')")
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) Long instituteId,
+                                          @RequestParam(required = false) Long classId,
+                                          @RequestParam(required = false) Long deviceId,
+                                          @RequestParam(required = false) String search) {
+        byte[] bytes = deviceUserService.exportToExcel(instituteId, classId, deviceId, search);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", "users-export.xlsx");
+        return ResponseEntity.ok().headers(headers).body(bytes);
     }
 
     @PostMapping

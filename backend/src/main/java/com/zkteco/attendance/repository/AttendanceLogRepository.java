@@ -12,4 +12,8 @@ public interface AttendanceLogRepository extends JpaRepository<AttendanceLog, Lo
     long countByInstituteIdAndPunchTimeBetween(Long instituteId, LocalDateTime start, LocalDateTime end);
     List<AttendanceLog> findTop15ByOrderByPunchTimeDesc();
     List<AttendanceLog> findTop15ByInstituteIdOrderByPunchTimeDesc(Long instituteId);
+
+    /** Backs the public /atd/list/primary API - same shape as SecondAttendanceInfoController's
+     *  /atd/list, but read from this app's own primary datasource instead of the external one. */
+    List<AttendanceLog> findByPunchTimeBetweenAndDevice_SerialNumberIn(LocalDateTime start, LocalDateTime end, List<String> serialNumbers);
 }

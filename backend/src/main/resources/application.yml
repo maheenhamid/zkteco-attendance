@@ -65,7 +65,7 @@ app:
     secret: ${JWT_SECRET:change-this-super-secret-key-in-production-min-256-bits-long-please}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://attendance.shebacms.com}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://attendance.shebacms.com,http://localhost:5173}
   device:
     offline-threshold-seconds: ${DEVICE_OFFLINE_THRESHOLD_SECONDS:180}
     command-timeout-seconds: ${DEVICE_COMMAND_TIMEOUT_SECONDS:600}

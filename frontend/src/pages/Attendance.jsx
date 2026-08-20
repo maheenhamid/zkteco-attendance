@@ -4,7 +4,7 @@ import DataTable from '../components/DataTable';
 import Pagination from '../components/Pagination';
 import PermissionGate from '../components/PermissionGate';
 import { useInstitutes } from '../hooks/useInstitutes';
-import { useClasses } from '../hooks/useClasses';
+import { useDepartments } from '../hooks/useDepartments';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { fetchDevices } from '../services/deviceService';
@@ -26,7 +26,7 @@ export default function Attendance() {
   const [page, setPage] = useState(0);
   const [exporting, setExporting] = useState(false);
 
-  const { data: classes = [] } = useClasses(filters.instituteId);
+  const { data: departments = [] } = useDepartments(filters.instituteId);
   const { data: devicesPage } = useQuery(
     ['devices-for-attendance', filters.instituteId],
     () => fetchDevices({ instituteId: filters.instituteId, size: 100 }),
@@ -104,8 +104,8 @@ export default function Attendance() {
           disabled={!filters.instituteId}
           className="rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
         >
-          <option value="">All Classes</option>
-          {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          <option value="">All Departments</option>
+          {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
         <select
           value={filters.deviceId}

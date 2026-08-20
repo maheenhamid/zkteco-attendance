@@ -3,6 +3,7 @@ package com.zkteco.attendance.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -32,6 +33,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
     public ResponseEntity<ApiError> handleAuth(Exception ex, WebRequest request) {
         return build(HttpStatus.UNAUTHORIZED, "Invalid username or password", request);
+    }
+
+    // @PreAuthorize denials thrown from inside a controller method (e.g. a stale JWT
+    // missing a newly-added permission) are resolved here, via DispatcherServlet's
+    // HandlerExceptionResolver chain, before they'd ever reach RestAccessDeniedHandler
+    // (which only sees denials from the servlet-filter chain itself, e.g. an anonymous
+    // request against an authenticated-only URL). Without this handler they fell
+    // through to the generic 500 case below instead of a proper 403.
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
+        return build(HttpStatus.FORBIDDEN, "You do not have permission to perform this action", request);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
